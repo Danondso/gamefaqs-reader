@@ -32,12 +32,6 @@ export function validateServerUrl(url: string): { valid: true } | { valid: false
     return { valid: false, error: 'URL must use http or https protocol' };
   }
 
-  // In production, warn about HTTP (unless localhost)
-  const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
-  if (!__DEV__ && parsed.protocol === 'http:' && !isLocalhost) {
-    return { valid: false, error: 'Production URLs must use HTTPS for security' };
-  }
-
   return { valid: true };
 }
 
