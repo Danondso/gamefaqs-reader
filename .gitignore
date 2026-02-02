@@ -47,3 +47,6 @@ ai-dev-tasks/
 # generated native folders
 /ios
 /android
+
+# EAS Build credentials
+credentials.json
