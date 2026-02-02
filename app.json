@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "GameFAQs Reader",
+    "slug": "gamefaqs-reader",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "bundleIdentifier": "com.gamefaqsreader.app",
+      "supportsTablet": false,
+      "buildNumber": "1",
+      "infoPlist": {
+        "UISupportsDocumentBrowser": true,
+        "UIBackgroundModes": [],
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.gamefaqsreader.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "20035909-5674-4320-985e-5cda355f852c"
+      }
+    },
+    "owner": "scorpcorp"
+  }
+}
