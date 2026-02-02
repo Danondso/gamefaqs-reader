@@ -44,7 +44,9 @@ class GuideParserService {
       case 'markdown':
         return 'md';
       case 'pdf':
-        throw new Error('PDF files must be imported via the server. Local PDF import is not supported.');
+        throw new Error(
+          'PDF guides cannot be imported from local files. To use a PDF guide, upload it to the companion server and import it from there. If server-based PDF import is not yet configured in this app, this feature may be available in a future update.'
+        );
       default:
         // Default to txt for unknown formats
         return 'txt';
