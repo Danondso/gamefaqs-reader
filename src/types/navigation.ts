@@ -9,4 +9,5 @@ export type RootStackParamList = {
   Main: undefined;
   HomeTabs: undefined;
   GuideReader: { guideId: string };
+  PrivacyPolicy: undefined;
 };

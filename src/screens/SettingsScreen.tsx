@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -7,7 +8,6 @@ import {
   TouchableOpacity,
   Modal,
   useColorScheme,
-  Switch,
   Alert,
   ActivityIndicator,
   TextInput,
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Application from 'expo-application';
 import { useSettings, validateServerUrl } from '../contexts/SettingsContext';
 import { useNetworkStatus } from '../providers/NetworkProvider';
 import { healthApi } from '../api/endpoints/health';
@@ -24,6 +25,7 @@ import { SyncManager } from '../services/SyncManager';
 export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const navigation = useNavigation<any>();
   const { settings, updateSettings } = useSettings();
   const { isOnline } = useNetworkStatus();
 
@@ -36,10 +38,14 @@ export default function SettingsScreen() {
   const [downloadedCount, setDownloadedCount] = useState<number | null>(null);
   const [pendingSyncCount, setPendingSyncCount] = useState<number | null>(null);
 
-  // Load counts on mount
-  React.useEffect(() => {
-    loadCounts();
-  }, []);
+  const appVersion = Application.nativeApplicationVersion;
+
+  // Load counts when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      loadCounts();
+    }, [])
+  );
 
   const loadCounts = async () => {
     try {
@@ -109,10 +115,7 @@ export default function SettingsScreen() {
       const result = await SyncManager.syncAll();
       await loadCounts();
       if (result.failed > 0) {
-        Alert.alert(
-          'Sync Complete',
-          `Synced ${result.success} items. ${result.failed} failed.`
-        );
+        Alert.alert('Sync Complete', `Synced ${result.success} items. ${result.failed} failed.`);
       } else {
         Alert.alert('Sync Complete', `Synced ${result.success} items.`);
       }
@@ -147,16 +150,9 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView
-      style={[
-        styles.container,
-        { backgroundColor: isDark ? '#000000' : '#f5f5f5' },
-      ]}
-    >
+    <ScrollView style={[styles.container, { backgroundColor: isDark ? '#000000' : '#f5f5f5' }]}>
       <View style={styles.content}>
-        <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#000' }]}>
-          Settings
-        </Text>
+        <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#000' }]}>Settings</Text>
         <Text style={[styles.subtitle, { color: isDark ? '#8E8E93' : '#666' }]}>
           App settings and configuration
         </Text>
@@ -170,42 +166,26 @@ export default function SettingsScreen() {
             },
           ]}
         >
-          <Ionicons
-            name={isOnline ? 'cloud-done' : 'cloud-offline'}
-            size={20}
-            color="#fff"
-          />
-          <Text style={styles.statusBannerText}>
-            {isOnline ? 'Connected' : 'Offline Mode'}
-          </Text>
+          <Ionicons name={isOnline ? 'cloud-done' : 'cloud-offline'} size={20} color="#fff" />
+          <Text style={styles.statusBannerText}>{isOnline ? 'Connected' : 'Offline Mode'}</Text>
         </View>
 
         {/* Server Configuration */}
         <View style={styles.section}>
-          <Text
-            style={[styles.sectionTitle, { color: isDark ? '#8E8E93' : '#666' }]}
-          >
+          <Text style={[styles.sectionTitle, { color: isDark ? '#8E8E93' : '#666' }]}>
             Server Configuration
           </Text>
 
           <TouchableOpacity
-            style={[
-              styles.settingItem,
-              { backgroundColor: isDark ? '#1C1C1E' : '#fff' },
-            ]}
+            style={[styles.settingItem, { backgroundColor: isDark ? '#1C1C1E' : '#fff' }]}
             onPress={handleOpenServerModal}
           >
             <View style={styles.flex1}>
-              <Text
-                style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}
-              >
+              <Text style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}>
                 Server URL
               </Text>
               <Text
-                style={[
-                  styles.settingDescription,
-                  { color: isDark ? '#8E8E93' : '#666' },
-                ]}
+                style={[styles.settingDescription, { color: isDark ? '#8E8E93' : '#666' }]}
                 numberOfLines={1}
               >
                 {settings.serverUrl}
@@ -217,31 +197,19 @@ export default function SettingsScreen() {
 
         {/* Offline & Sync */}
         <View style={styles.section}>
-          <Text
-            style={[styles.sectionTitle, { color: isDark ? '#8E8E93' : '#666' }]}
-          >
+          <Text style={[styles.sectionTitle, { color: isDark ? '#8E8E93' : '#666' }]}>
             Offline & Sync
           </Text>
 
-          <View
-            style={[
-              styles.settingItem,
-              { backgroundColor: isDark ? '#1C1C1E' : '#fff' },
-            ]}
-          >
+          <View style={[styles.settingItem, { backgroundColor: isDark ? '#1C1C1E' : '#fff' }]}>
             <View style={styles.flex1}>
-              <Text
-                style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}
-              >
+              <Text style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}>
                 Downloaded Guides
               </Text>
-              <Text
-                style={[
-                  styles.settingDescription,
-                  { color: isDark ? '#8E8E93' : '#666' },
-                ]}
-              >
-                {downloadedCount !== null ? `${downloadedCount} guides available offline` : 'Loading...'}
+              <Text style={[styles.settingDescription, { color: isDark ? '#8E8E93' : '#666' }]}>
+                {downloadedCount !== null
+                  ? `${downloadedCount} guide(s) available offline`
+                  : 'Loading...'}
               </Text>
             </View>
           </View>
@@ -260,12 +228,7 @@ export default function SettingsScreen() {
                 <Text style={[styles.settingLabel, styles.highlightText]}>
                   Sync Pending Changes
                 </Text>
-                <Text
-                  style={[
-                    styles.settingDescription,
-                    { color: isDark ? '#8E8E93' : '#666' },
-                  ]}
-                >
+                <Text style={[styles.settingDescription, { color: isDark ? '#8E8E93' : '#666' }]}>
                   {pendingSyncCount} changes waiting to sync
                 </Text>
               </View>
@@ -286,15 +249,8 @@ export default function SettingsScreen() {
             onPress={handleClearDownloads}
           >
             <View style={styles.flex1}>
-              <Text style={[styles.settingLabel, styles.dangerText]}>
-                Clear Downloaded Guides
-              </Text>
-              <Text
-                style={[
-                  styles.settingDescription,
-                  { color: isDark ? '#8E8E93' : '#666' },
-                ]}
-              >
+              <Text style={[styles.settingLabel, styles.dangerText]}>Clear Downloaded Guides</Text>
+              <Text style={[styles.settingDescription, { color: isDark ? '#8E8E93' : '#666' }]}>
                 Remove all offline guides
               </Text>
             </View>
@@ -302,155 +258,54 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Appearance */}
-        <View style={styles.section}>
-          <Text
-            style={[styles.sectionTitle, { color: isDark ? '#8E8E93' : '#666' }]}
-          >
-            Appearance
-          </Text>
-
-          <View
-            style={[
-              styles.settingItem,
-              { backgroundColor: isDark ? '#1C1C1E' : '#fff' },
-            ]}
-          >
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text
-                  style={[
-                    styles.settingLabel,
-                    { color: isDark ? '#FFFFFF' : '#000' },
-                  ]}
-                >
-                  Use System Theme
-                </Text>
-                <Text
-                  style={[
-                    styles.settingDescription,
-                    { color: isDark ? '#8E8E93' : '#666' },
-                  ]}
-                >
-                  Follow device light/dark mode
-                </Text>
-              </View>
-              <Switch
-                value={settings.useSystemTheme}
-                onValueChange={(value) => updateSettings({ useSystemTheme: value })}
-                trackColor={{ false: '#767577', true: '#007AFF' }}
-              />
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.settingItem,
-              { backgroundColor: isDark ? '#1C1C1E' : '#fff' },
-            ]}
-          >
-            <View style={styles.settingInfo}>
-              <Text
-                style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}
-              >
-                Default Font Size
-              </Text>
-              <Text
-                style={[
-                  styles.settingDescription,
-                  { color: isDark ? '#8E8E93' : '#666' },
-                ]}
-              >
-                {settings.defaultFontSize}pt (range: 10-24)
-              </Text>
-            </View>
-          </View>
-        </View>
-
         {/* About */}
         <View style={styles.section}>
-          <Text
-            style={[styles.sectionTitle, { color: isDark ? '#8E8E93' : '#666' }]}
-          >
-            About
-          </Text>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#8E8E93' : '#666' }]}>About</Text>
 
-          <View
-            style={[
-              styles.settingItem,
-              { backgroundColor: isDark ? '#1C1C1E' : '#fff' },
-            ]}
-          >
+          <View style={[styles.settingItem, { backgroundColor: isDark ? '#1C1C1E' : '#fff' }]}>
             <View>
-              <Text
-                style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}
-              >
+              <Text style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}>
                 Version
               </Text>
-              <Text
-                style={[
-                  styles.settingDescription,
-                  { color: isDark ? '#8E8E93' : '#666' },
-                ]}
-              >
-                1.0.0 (API-first)
-              </Text>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.settingItem,
-              { backgroundColor: isDark ? '#1C1C1E' : '#fff' },
-            ]}
-          >
-            <View>
-              <Text
-                style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}
-              >
-                Made with
-              </Text>
-              <Text
-                style={[
-                  styles.settingDescription,
-                  { color: isDark ? '#8E8E93' : '#666' },
-                ]}
-              >
-                React Native, Expo & TanStack Query
+              <Text style={[styles.settingDescription, { color: isDark ? '#8E8E93' : '#666' }]}>
+                {appVersion}
               </Text>
             </View>
           </View>
 
           <TouchableOpacity
-            style={[
-              styles.settingItem,
-              { backgroundColor: isDark ? '#1C1C1E' : '#fff' },
-            ]}
+            style={[styles.settingItem, { backgroundColor: isDark ? '#1C1C1E' : '#fff' }]}
             onPress={() => {
-              // TODO: Replace with your actual privacy policy URL
-              const privacyPolicyUrl = 'https://example.com/privacy-policy';
-              Linking.openURL(privacyPolicyUrl).catch((err) => {
-                if (__DEV__) console.error('Failed to open privacy policy:', err);
-                Alert.alert('Error', 'Could not open privacy policy');
+              Linking.openURL('https://github.com/Danondso/gamefaqs-reader').catch(err => {
+                if (__DEV__) console.error('Failed to open repository:', err);
+                Alert.alert('Error', 'Could not open repository');
               });
             }}
           >
             <View style={styles.flex1}>
-              <Text
-                style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}
-              >
+              <Text style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}>
+                Source Code
+              </Text>
+              <Text style={[styles.settingDescription, { color: isDark ? '#8E8E93' : '#666' }]}>
+                View on GitHub
+              </Text>
+            </View>
+            <Ionicons name="logo-github" size={20} color={isDark ? '#8E8E93' : '#666'} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { backgroundColor: isDark ? '#1C1C1E' : '#fff' }]}
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+          >
+            <View style={styles.flex1}>
+              <Text style={[styles.settingLabel, { color: isDark ? '#FFFFFF' : '#000' }]}>
                 Privacy Policy
               </Text>
-              <Text
-                style={[
-                  styles.settingDescription,
-                  { color: isDark ? '#8E8E93' : '#666' },
-                ]}
-              >
+              <Text style={[styles.settingDescription, { color: isDark ? '#8E8E93' : '#666' }]}>
                 View our privacy policy
               </Text>
             </View>
-            <Ionicons name="open-outline" size={20} color={isDark ? '#8E8E93' : '#666'} />
+            <Text style={styles.settingChevron}>›</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -470,9 +325,7 @@ export default function SettingsScreen() {
             <TouchableOpacity onPress={() => setShowServerModal(false)}>
               <Text style={styles.modalCloseButton}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#000' }]}>
-              Server URL
-            </Text>
+            <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#000' }]}>Server URL</Text>
             <TouchableOpacity onPress={handleSaveServerUrl}>
               <Text style={styles.modalSaveButton}>Save</Text>
             </TouchableOpacity>
@@ -507,9 +360,7 @@ export default function SettingsScreen() {
             {urlValidationError && (
               <View style={styles.statusMessage}>
                 <Ionicons name="alert-circle" size={20} color="#FF3B30" />
-                <Text style={[styles.statusText, { color: '#FF3B30' }]}>
-                  {urlValidationError}
-                </Text>
+                <Text style={[styles.statusText, { color: '#FF3B30' }]}>{urlValidationError}</Text>
               </View>
             )}
 
@@ -533,18 +384,14 @@ export default function SettingsScreen() {
             {connectionStatus === 'success' && (
               <View style={styles.statusMessage}>
                 <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-                <Text style={[styles.statusText, { color: '#34C759' }]}>
-                  Connection successful
-                </Text>
+                <Text style={[styles.statusText, { color: '#34C759' }]}>Connection successful</Text>
               </View>
             )}
 
             {connectionStatus === 'error' && (
               <View style={styles.statusMessage}>
                 <Ionicons name="close-circle" size={20} color="#FF3B30" />
-                <Text style={[styles.statusText, { color: '#FF3B30' }]}>
-                  Connection failed
-                </Text>
+                <Text style={[styles.statusText, { color: '#FF3B30' }]}>Connection failed</Text>
               </View>
             )}
           </View>
@@ -625,15 +472,6 @@ const styles = StyleSheet.create({
   settingChevron: {
     fontSize: 24,
     color: '#C7C7CC',
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  settingInfo: {
-    flex: 1,
   },
   flex1: {
     flex: 1,

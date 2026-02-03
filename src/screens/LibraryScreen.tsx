@@ -263,11 +263,12 @@ export default function LibraryScreen() {
 
   const handleLoadMore = useCallback(() => {
     // Only fetch more if we have a next page, aren't already fetching,
-    // aren't searching, and have some data already loaded
-    if (hasNextPage && !isFetchingNextPage && !debouncedSearchQuery && allGuides.length > 0) {
+    // aren't searching, have no filters active, and have some data already loaded
+    const hasActiveFilter = selectedPlatform !== null || selectedTag !== null;
+    if (hasNextPage && !isFetchingNextPage && !debouncedSearchQuery && !hasActiveFilter && allGuides.length > 0) {
       fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, debouncedSearchQuery, allGuides.length]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, debouncedSearchQuery, selectedPlatform, selectedTag, allGuides.length]);
 
   // Memoized renderItem for FlatList
   const renderItem = useCallback(

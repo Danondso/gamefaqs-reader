@@ -8,6 +8,7 @@ import LibraryScreen from '../screens/LibraryScreen';
 import DownloadsScreen from '../screens/DownloadsScreen';
 import GuideReaderScreen from '../screens/GuideReaderScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import { createStackNavigator } from '@react-navigation/stack';
 
 const Stack = createStackNavigator();
@@ -82,6 +83,11 @@ export default function RootNavigator() {
           name="GuideReader"
           component={GuideReaderScreen}
           options={{ title: 'Guide Reader' }}
+        />
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={PrivacyPolicyScreen}
+          options={{ title: 'Privacy Policy' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
