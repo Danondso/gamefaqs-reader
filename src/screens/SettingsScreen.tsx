@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Application from 'expo-application';
+import { version as appVersion } from '../../package.json';
 import { useSettings, validateServerUrl } from '../contexts/SettingsContext';
 import { useNetworkStatus } from '../providers/NetworkProvider';
 import { healthApi } from '../api/endpoints/health';
@@ -37,8 +37,6 @@ export default function SettingsScreen() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [downloadedCount, setDownloadedCount] = useState<number | null>(null);
   const [pendingSyncCount, setPendingSyncCount] = useState<number | null>(null);
-
-  const appVersion = Application.nativeApplicationVersion;
 
   // Load counts when screen is focused
   useFocusEffect(
