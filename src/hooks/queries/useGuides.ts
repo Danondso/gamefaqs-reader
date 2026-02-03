@@ -1,7 +1,7 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { guidesApi } from '@/api/endpoints/guides';
 import { queryKeys } from '@/api/queryKeys';
-import type { GuidesResponse, SearchResults } from '@/api/types';
+import type { GuidesResponse, SearchResults, GuideFilters, GuidesFiltersResponse } from '@/api/types';
 
 export function useGuides(page = 1, limit = 20) {
   return useQuery({
@@ -10,16 +10,24 @@ export function useGuides(page = 1, limit = 20) {
   });
 }
 
-export function useGuidesInfinite(limit = 20) {
+export function useGuidesInfinite(limit = 20, filters?: GuideFilters) {
   return useInfiniteQuery<GuidesResponse, Error>({
-    queryKey: queryKeys.guides.lists(),
+    queryKey: queryKeys.guides.filteredLists(filters),
     queryFn: ({ pageParam }) =>
-      guidesApi.getAll(pageParam as number, limit),
+      guidesApi.getAll(pageParam as number, limit, filters),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       const { page, totalPages } = lastPage.pagination;
       return page < totalPages ? page + 1 : undefined;
     },
+  });
+}
+
+export function useGuidesFilters() {
+  return useQuery<GuidesFiltersResponse, Error>({
+    queryKey: queryKeys.guides.filters(),
+    queryFn: () => guidesApi.getFilters(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 

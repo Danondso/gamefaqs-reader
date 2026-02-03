@@ -24,9 +24,9 @@ import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
 import { Tag } from '../components/Tag';
 import { useDebounce } from '../hooks/useDebounce';
-import { useGuidesInfinite, useGuidesSearch } from '../hooks/queries/useGuides';
+import { useGuidesInfinite, useGuidesSearch, useGuidesFilters } from '../hooks/queries/useGuides';
 import { useNetworkStatus } from '../providers/NetworkProvider';
-import type { GuideSummary } from '../api/types';
+import type { GuideSummary, GuideFilters } from '../api/types';
 
 interface ParsedGuideMetadata {
   author: string;
@@ -155,11 +155,24 @@ export default function LibraryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
+  const [platformSearchQuery, setPlatformSearchQuery] = useState('');
 
   // Debounced search query
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Fetch guides with infinite scroll
+  // Build filter params for server-side filtering
+  const filterParams: GuideFilters | undefined = useMemo(() => {
+    if (!selectedPlatform && !selectedTag) return undefined;
+    const params: GuideFilters = {};
+    if (selectedPlatform) params.platform = selectedPlatform;
+    if (selectedTag) params.tags = [selectedTag];
+    return params;
+  }, [selectedPlatform, selectedTag]);
+
+  // Fetch available filters from server
+  const { data: filtersData } = useGuidesFilters();
+
+  // Fetch guides with infinite scroll and server-side filtering
   const {
     data: guidesData,
     isLoading,
@@ -169,7 +182,7 @@ export default function LibraryScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useGuidesInfinite(20);
+  } = useGuidesInfinite(20, filterParams);
 
   // Search query
   const { data: searchData, isLoading: isSearching } = useGuidesSearch(
@@ -196,25 +209,22 @@ export default function LibraryScreen() {
     }));
   }, [allGuides]);
 
-  // Extract available platforms
+  // Get available platforms from server
   const availablePlatforms = useMemo(() => {
-    const platformsSet = new Set<string>();
-    guidesWithMetadata.forEach(({ metadata }) => {
-      if (metadata.platform) {
-        platformsSet.add(metadata.platform);
-      }
-    });
-    return Array.from(platformsSet).sort();
-  }, [guidesWithMetadata]);
+    return filtersData?.platforms ?? [];
+  }, [filtersData]);
 
-  // Extract available tags
+  // Filter platforms based on search query
+  const filteredPlatforms = useMemo(() => {
+    if (!platformSearchQuery.trim()) return availablePlatforms;
+    const query = platformSearchQuery.toLowerCase();
+    return availablePlatforms.filter((platform) => platform.toLowerCase().includes(query));
+  }, [availablePlatforms, platformSearchQuery]);
+
+  // Get available tags from server
   const availableTags = useMemo(() => {
-    const tagsSet = new Set<string>();
-    guidesWithMetadata.forEach(({ metadata }) => {
-      metadata.tags.forEach((tag) => tagsSet.add(tag));
-    });
-    return Array.from(tagsSet).sort();
-  }, [guidesWithMetadata]);
+    return filtersData?.tags ?? [];
+  }, [filtersData]);
 
   // Filter tags based on search query
   const filteredTags = useMemo(() => {
@@ -223,7 +233,7 @@ export default function LibraryScreen() {
     return availableTags.filter((tag) => tag.toLowerCase().includes(query));
   }, [availableTags, tagSearchQuery]);
 
-  // Get display data (search results or filtered guides)
+  // Get display data (search results or guides from server)
   const displayData = useMemo(() => {
     // If searching, use search results
     if (debouncedSearchQuery.trim().length >= 2 && searchData) {
@@ -240,19 +250,9 @@ export default function LibraryScreen() {
       }));
     }
 
-    // Otherwise use filtered guides
-    let filtered = guidesWithMetadata;
-
-    if (selectedPlatform) {
-      filtered = filtered.filter(({ metadata }) => metadata.platform === selectedPlatform);
-    }
-
-    if (selectedTag) {
-      filtered = filtered.filter(({ metadata }) => metadata.tags.includes(selectedTag));
-    }
-
-    return filtered;
-  }, [guidesWithMetadata, selectedPlatform, selectedTag, debouncedSearchQuery, searchData]);
+    // Otherwise use server-filtered guides (no client-side filtering needed)
+    return guidesWithMetadata;
+  }, [guidesWithMetadata, debouncedSearchQuery, searchData]);
 
   const handleGuidePress = useCallback(
     (guideId: string) => {
@@ -263,12 +263,11 @@ export default function LibraryScreen() {
 
   const handleLoadMore = useCallback(() => {
     // Only fetch more if we have a next page, aren't already fetching,
-    // aren't searching, have no filters active, and have some data already loaded
-    const hasActiveFilter = selectedPlatform !== null || selectedTag !== null;
-    if (hasNextPage && !isFetchingNextPage && !debouncedSearchQuery && !hasActiveFilter && allGuides.length > 0) {
+    // aren't searching, and have some data already loaded
+    if (hasNextPage && !isFetchingNextPage && !debouncedSearchQuery && allGuides.length > 0) {
       fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, debouncedSearchQuery, selectedPlatform, selectedTag, allGuides.length]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, debouncedSearchQuery, allGuides.length]);
 
   // Memoized renderItem for FlatList
   const renderItem = useCallback(
@@ -544,10 +543,13 @@ export default function LibraryScreen() {
         <TouchableOpacity
           style={styles.pickerBackdrop}
           activeOpacity={1}
-          onPress={() => setShowPlatformPicker(false)}
+          onPress={() => {
+            setShowPlatformPicker(false);
+            setPlatformSearchQuery('');
+          }}
         >
           <View
-            style={[styles.pickerSheet, { backgroundColor: theme.colors.background }]}
+            style={[styles.pickerSheet, styles.tallPickerSheet, { backgroundColor: theme.colors.background }]}
             onStartShouldSetResponder={() => true}
           >
             <View
@@ -565,14 +567,36 @@ export default function LibraryScreen() {
                 Filter by Platform
               </Text>
               <TouchableOpacity
-                onPress={() => setShowPlatformPicker(false)}
+                onPress={() => {
+                  setShowPlatformPicker(false);
+                  setPlatformSearchQuery('');
+                }}
                 style={styles.pickerClose}
               >
                 <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
+            <View style={[styles.tagSearchContainer, { borderBottomColor: theme.colors.border }]}>
+              <TextInput
+                style={[
+                  styles.tagSearchInput,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border,
+                    fontSize: theme.typography.fontSize.sm,
+                  },
+                ]}
+                value={platformSearchQuery}
+                onChangeText={setPlatformSearchQuery}
+                placeholder="Search platforms..."
+                placeholderTextColor={theme.colors.textSecondary}
+                returnKeyType="search"
+                accessibilityLabel="Search platforms"
+              />
+            </View>
             <FlatList
-              data={[null, ...availablePlatforms]}
+              data={[null, ...filteredPlatforms]}
               keyExtractor={(item) => item || 'all'}
               renderItem={({ item }) => {
                 const isSelected = selectedPlatform === item;
@@ -590,6 +614,7 @@ export default function LibraryScreen() {
                     onPress={() => {
                       setSelectedPlatform(item);
                       setShowPlatformPicker(false);
+                      setPlatformSearchQuery('');
                     }}
                   >
                     <Text
@@ -606,6 +631,18 @@ export default function LibraryScreen() {
                   </TouchableOpacity>
                 );
               }}
+              ListEmptyComponent={
+                <View style={styles.emptyTagSearch}>
+                  <Text
+                    style={[
+                      styles.emptyTagSearchText,
+                      { color: theme.colors.textSecondary, fontSize: theme.typography.fontSize.sm },
+                    ]}
+                  >
+                    No platforms match "{platformSearchQuery}"
+                  </Text>
+                </View>
+              }
             />
           </View>
         </TouchableOpacity>
@@ -622,7 +659,7 @@ export default function LibraryScreen() {
           }}
         >
           <View
-            style={[styles.pickerSheet, { backgroundColor: theme.colors.background }]}
+            style={[styles.pickerSheet, styles.tallPickerSheet, { backgroundColor: theme.colors.background }]}
             onStartShouldSetResponder={() => true}
           >
             <View
@@ -664,7 +701,6 @@ export default function LibraryScreen() {
                 onChangeText={setTagSearchQuery}
                 placeholder="Search tags..."
                 placeholderTextColor={theme.colors.textSecondary}
-                autoFocus
                 returnKeyType="search"
                 accessibilityLabel="Search tags"
               />
@@ -860,6 +896,9 @@ const styles = StyleSheet.create({
     height: '66%',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
+  },
+  tallPickerSheet: {
+    height: '90%',
   },
   pickerHeader: {
     flexDirection: 'row',

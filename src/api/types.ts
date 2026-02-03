@@ -62,3 +62,14 @@ export interface UpdateNoteInput {
   position?: number | null;
   content?: string;
 }
+
+export interface GuideFilters {
+  platform?: string;
+  tags?: string[];
+  tagMatch?: 'any' | 'all';
+}
+
+export interface GuidesFiltersResponse {
+  platforms: string[];
+  tags: string[];
+}

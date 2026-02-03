@@ -1,9 +1,14 @@
+import type { GuideFilters } from './types';
+
 export const queryKeys = {
   guides: {
     all: ['guides'] as const,
     lists: () => [...queryKeys.guides.all, 'list'] as const,
     list: (page: number, limit: number) =>
       [...queryKeys.guides.lists(), { page, limit }] as const,
+    filteredLists: (filters?: GuideFilters) =>
+      filters ? [...queryKeys.guides.lists(), { filters }] as const : queryKeys.guides.lists(),
+    filters: () => [...queryKeys.guides.all, 'filters'] as const,
     details: () => [...queryKeys.guides.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.guides.details(), id] as const,
     search: (query: string, limit?: number) =>
